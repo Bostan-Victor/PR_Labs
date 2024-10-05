@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from functools import reduce
-from datetime import datetime
+from datetime import datetime, timezone
 
 url = 'https://darwin.md/telefoane' 
 
@@ -24,7 +24,7 @@ def process_products(products):
     total_price_eur = reduce(lambda acc, p: acc + p['price_eur'], filtered_products, 0)
     
     # Attach UTC timestamp
-    timestamp = datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S %Z')
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S %Z')
     
     # Return the filtered products, total price, and timestamp
     return {
