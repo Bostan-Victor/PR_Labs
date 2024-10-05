@@ -1,7 +1,38 @@
 import requests
 from bs4 import BeautifulSoup
+from functools import reduce
+from datetime import datetime
 
 url = 'https://darwin.md/telefoane' 
+
+MDL_TO_EUR_RATE = 19.5  #
+EUR_TO_MDL_RATE = 1 / MDL_TO_EUR_RATE
+
+
+def mdl_to_eur(price_mdl):
+    return price_mdl / MDL_TO_EUR_RATE
+
+
+def process_products(products):
+    # Map: Convert MDL prices to EUR
+    mapped_products = map(lambda p: {**p, 'price_eur': mdl_to_eur(p['price_mdl'])}, products)
+    
+    # Filter: Products within a certain price range in EUR
+    filtered_products = list(filter(lambda p: 100 <= p['price_eur'] <= 500, mapped_products))
+    
+    # Reduce: Sum up the EUR prices of the filtered products
+    total_price_eur = reduce(lambda acc, p: acc + p['price_eur'], filtered_products, 0)
+    
+    # Attach UTC timestamp
+    timestamp = datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S %Z')
+    
+    # Return the filtered products, total price, and timestamp
+    return {
+        'filtered_products': filtered_products,
+        'total_price_eur': total_price_eur,
+        'timestamp': timestamp
+    }
+
 
 response = requests.get(url)
 
@@ -19,10 +50,8 @@ if response.status_code == 200:
     products = soup.find_all('figure', class_='card card-product border-0')
 
     print("\nPrinting all products found on the page:\n")
-    for index, product in enumerate(products):
-        if index == 3:
-            break
-
+    product_list = []
+    for product in products[:3]:
         name = product.find('a', class_='d-block mb-2 ga-item').text  
         name = name.strip()  # Validation: strip whitespace
         price_container = product.find('span', class_='price-new')
@@ -30,11 +59,16 @@ if response.status_code == 200:
         print(f"Product Name: {name}")
         # Validation: Ensure the price is an integer and remove non-numeric characters
         try:
-            price = int(price_text.replace(',', '').replace(' ', '').replace('MDL', ''))
-            print(f"Product Price: {price}")
+            price_mdl = int(price_text.replace(',', '').replace(' ', '').replace('MDL', ''))
+            print(f"Product Price (MDL): {price_mdl}")
         except ValueError:
             print(f"Invalid price format: {price_text}")
-            price = "Invalid price"
+            price_mdl = 0
+
+        product_list.append({
+            'name': name,
+            'price_mdl': price_mdl
+        })
 
         # Task 3 (Extract product link and something from product page)
         product_link_tag = product.find('a', class_='d-block mb-2 ga-item') 
@@ -55,5 +89,15 @@ if response.status_code == 200:
         else:
             print(f"Failed to retrieve the product page. Status Code: {product_response.status_code}\n")
         print("-------")
+
+    # Task 5: Process products using Map/Filter/Reduce
+    processed_result = process_products(product_list)
+
+    print("\nFiltered Products (within EUR range 100-500):")
+    for product in processed_result['filtered_products']:
+        print(f"Name: {product['name']}, Price in EUR: {product['price_eur']:.2f} EUR")
+    
+    print(f"\nTotal Price of Filtered Products: {processed_result['total_price_eur']:.2f} EUR")
+    print(f"Timestamp: {processed_result['timestamp']}")
 else:
     print("Failed to retrieve the website. Status Code:", response.status_code)
