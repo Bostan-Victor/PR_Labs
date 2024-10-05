@@ -32,6 +32,36 @@ def process_products(products):
         'timestamp': timestamp
     }
 
+def serialize_to_json(products):
+    json_string = "[\n"
+    for i, product in enumerate(products):
+        json_string += "  {\n"
+        json_string += f'    "name": "{product["name"]}",\n'
+        json_string += f'    "price_mdl": {product["price_mdl"]},\n'
+        json_string += f'    "price_eur": {product["price_eur"]:.2f}\n'
+        json_string += "  }"
+        if i < len(products) - 1:
+            json_string += ",\n"
+        else:
+            json_string += "\n"
+    json_string += "]"
+    print("\nSerialized to JSON:\n", json_string)
+
+def serialize_to_xml(products):
+    xml_string = "<products>\n"
+    for product in products:
+        xml_string += "  <product>\n"
+        xml_string += f'    <name>{product["name"]}</name>\n'
+        xml_string += f'    <price_mdl>{product["price_mdl"]}</price_mdl>\n'
+        xml_string += f'    <price_eur>{product["price_eur"]:.2f}</price_eur>\n'
+        xml_string += "  </product>\n"
+    xml_string += "</products>"
+    print("\nSerialized to XML:\n", xml_string)
+
+def serialize_products(products):
+    serialize_to_json(products)
+    serialize_to_xml(products)
+
 # Function to make a socket-based HTTP GET request
 def get_http_response(host, port, request, use_ssl=False):
     if use_ssl:
@@ -138,3 +168,6 @@ for product in processed_result['filtered_products']:
 
 print(f"\nTotal Price of Filtered Products: {processed_result['total_price_eur']:.2f} EUR")
 print(f"Timestamp: {processed_result['timestamp']}")
+
+# Task 6: Serialize products to JSON and XML formats
+serialize_products(processed_result['filtered_products'])
