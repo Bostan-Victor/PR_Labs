@@ -62,6 +62,36 @@ def serialize_products(products):
     serialize_to_json(products)
     serialize_to_xml(products)
 
+def custom_serialize(products):
+    serialized_data = ""
+    for product in products:
+        serialized_data += f"{product['name']}|{product['price_mdl']}|{product['price_eur']:.2f};;;"
+    return serialized_data.strip(';;;')
+
+def custom_deserialize(serialized_data):
+    products = []
+    product_entries = serialized_data.split(';;;')
+    for entry in product_entries:
+        name, price_mdl, price_eur = entry.split('|')
+        product = {
+            'name': name,
+            'price_mdl': int(price_mdl),
+            'price_eur': float(price_eur)
+        }
+        products.append(product)
+    return products
+
+def custom_serialization_workflow(products):
+    # Serialize the products into custom format
+    serialized_data = custom_serialize(products)
+    print("\nSerialized Data (Custom Format):\n", serialized_data)
+
+    # Deserialize the data back into products
+    deserialized_products = custom_deserialize(serialized_data)
+    print("\nDeserialized Data (Back to Objects):")
+    for product in deserialized_products:
+        print(f"Name: {product['name']}, Price (MDL): {product['price_mdl']}, Price (EUR): {product['price_eur']:.2f}")
+
 # Function to make a socket-based HTTP GET request
 def get_http_response(host, port, request, use_ssl=False):
     if use_ssl:
@@ -171,3 +201,6 @@ print(f"Timestamp: {processed_result['timestamp']}")
 
 # Task 6: Serialize products to JSON and XML formats
 serialize_products(processed_result['filtered_products'])
+
+# Task 7: Custom serialization and deserialization
+custom_serialization_workflow(processed_result['filtered_products'])
