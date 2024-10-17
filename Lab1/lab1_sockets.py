@@ -7,11 +7,9 @@ from datetime import datetime, timezone
 MDL_TO_EUR_RATE = 19.5  
 EUR_TO_MDL_RATE = 1 / MDL_TO_EUR_RATE  
 
-# Conversion function from MDL to EUR
 def mdl_to_eur(price_mdl):
     return price_mdl / MDL_TO_EUR_RATE
 
-# Function to process products using Map/Filter/Reduce
 def process_products(products):
     # Map: Convert MDL prices to EUR
     mapped_products = map(lambda p: {**p, 'price_eur': mdl_to_eur(p['price_mdl'])}, products)
@@ -25,7 +23,6 @@ def process_products(products):
     # UTC timestamp
     timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S %Z')
     
-    # Return the filtered products, total price, and timestamp
     return {
         'filtered_products': filtered_products,
         'total_price_eur': total_price_eur,
@@ -65,7 +62,10 @@ def serialize_products(products):
 def custom_serialize(products):
     serialized_data = ""
     for product in products:
-        serialized_data += f"{product['name']}|{product['price_mdl']}|{product['price_eur']:.2f};;;"
+        for key, value in product.items():
+            serialized_data += f"{key}:{value}|"
+        serialized_data = serialized_data.strip('|')
+        serialized_data += ";;;"
     return serialized_data.strip(';;;')
 
 def custom_deserialize(serialized_data):
@@ -74,19 +74,17 @@ def custom_deserialize(serialized_data):
     for entry in product_entries:
         name, price_mdl, price_eur = entry.split('|')
         product = {
-            'name': name,
-            'price_mdl': int(price_mdl),
-            'price_eur': float(price_eur)
+            name.split(':')[0]: name.split(':')[1],
+            price_mdl.split(':')[0]: int(price_mdl.split(':')[1]),
+            price_eur.split(':')[0]: float(price_eur.split(':')[1])
         }
         products.append(product)
     return products
 
 def custom_serialization_workflow(products):
-    # Serialize the products into custom format
     serialized_data = custom_serialize(products)
     print("\nSerialized Data (Custom Format):\n", serialized_data)
 
-    # Deserialize the data back into products
     deserialized_products = custom_deserialize(serialized_data)
     print("\nDeserialized Data (Back to Objects):")
     for product in deserialized_products:

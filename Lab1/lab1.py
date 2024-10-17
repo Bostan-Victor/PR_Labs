@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 url = 'https://darwin.md/telefoane' 
 
-MDL_TO_EUR_RATE = 19.5  #
+MDL_TO_EUR_RATE = 19.5
 EUR_TO_MDL_RATE = 1 / MDL_TO_EUR_RATE
 
 
@@ -26,7 +26,6 @@ def process_products(products):
     # Attach UTC timestamp
     timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S %Z')
     
-    # Return the filtered products, total price, and timestamp
     return {
         'filtered_products': filtered_products,
         'total_price_eur': total_price_eur,
@@ -39,10 +38,10 @@ response = requests.get(url)
 if response.status_code == 200:
     # Task 1 (HTTP GET request)
     print("HTTP GET request successful!")
-    # print("Response Status Code:", response.status_code)
-    # print("Response Headers:", response.headers)
-    # print("\nHTML Content/Body (First 500 characters):\n")
-    # print(response.text[:500] + "...") 
+    print("Response Status Code:", response.status_code)
+    print("Response Headers:", response.headers)
+    print("\nHTML Content/Body (First 500 characters):\n")
+    print(response.text[:500] + "...") 
 
     # Task 2 (Extract name and price)
     soup = BeautifulSoup(response.text, 'html.parser')
