@@ -59,27 +59,62 @@ def serialize_products(products):
     serialize_to_json(products)
     serialize_to_xml(products)
 
-def custom_serialize(products):
-    serialized_data = ""
-    for product in products:
-        for key, value in product.items():
-            serialized_data += f"{key}:{value}|"
-        serialized_data = serialized_data.strip('|')
-        serialized_data += ";;;"
-    return serialized_data.strip(';;;')
+def custom_serialize(data):
+    if isinstance(data, dict):
+        serialized_data = "Dict:["
+        for key, value in data.items():
+            serialized_data += f"key:{custom_serialize(key)};value:{custom_serialize(value)};"
+        serialized_data = serialized_data.rstrip(';') + "]"
+        return serialized_data
+    elif isinstance(data, list):
+        serialized_data = "List:["
+        for item in data:
+            serialized_data += f"{custom_serialize(item)};;"
+        serialized_data = serialized_data.rstrip(';;') + "]"
+        return serialized_data
+    elif isinstance(data, str):
+        return f"str({data})"
+    elif isinstance(data, int):
+        return f"int({data})"
+    elif isinstance(data, float):
+        return f"float({data})"
+    else:
+        raise TypeError(f"Unsupported data type: {type(data)}")
+
 
 def custom_deserialize(serialized_data):
-    products = []
-    product_entries = serialized_data.split(';;;')
-    for entry in product_entries:
-        name, price_mdl, price_eur = entry.split('|')
-        product = {
-            name.split(':')[0]: name.split(':')[1],
-            price_mdl.split(':')[0]: int(price_mdl.split(':')[1]),
-            price_eur.split(':')[0]: float(price_eur.split(':')[1])
-        }
-        products.append(product)
-    return products
+    if serialized_data.startswith("Dict:["):
+        serialized_data = serialized_data[6:-1]  
+        items = serialized_data.split(";")
+        deserialized_dict = {}
+        i = 0
+        while i < len(items):
+            if items[i].startswith("key:"):
+                key = custom_deserialize(items[i][4:])  
+                i += 1
+            if i < len(items) and items[i].startswith("value:"):
+                value = custom_deserialize(items[i][6:]) 
+                deserialized_dict[key] = value
+                i += 1
+        return deserialized_dict
+    elif serialized_data.startswith("List:["):
+        # Deserialize list
+        serialized_data = serialized_data[6:-1]
+        items = serialized_data.split(";;")
+        deserialized_list = []
+        for item in items:
+            if item:
+                deserialized_list.append(custom_deserialize(item))
+        return deserialized_list
+    elif serialized_data.startswith("str("):
+        return serialized_data[4:-1]
+    elif serialized_data.startswith("int("):
+        return int(serialized_data[4:-1])
+    elif serialized_data.startswith("float("):
+        return float(serialized_data[6:-1])
+    else:
+        raise ValueError(f"Unrecognized format: {serialized_data}")
+
 
 def custom_serialization_workflow(products):
     serialized_data = custom_serialize(products)
@@ -118,7 +153,7 @@ def get_http_response(host, port, request, use_ssl=False):
 host = 'darwin.md'
 port = 80  
 
-request = f"GET /telefoane HTTP/1.1\r\n" \
+request = f"GET /telefoane/smartphone HTTP/1.1\r\n" \
           f"Host: {host}\r\n" \
           f"Connection: close\r\n\r\n"
 
@@ -135,7 +170,7 @@ if "301 Moved Permanently" in http_response:
     port = 443  # HTTPS port
 
     # Make the HTTPS request to the redirected URL
-    request = f"GET /telefoane HTTP/1.1\r\n" \
+    request = f"GET /telefoane/smartphone HTTP/1.1\r\n" \
               f"Host: {host}\r\n" \
               f"Connection: close\r\n\r\n"
     http_response = get_http_response(host, port, request, use_ssl=True)
@@ -146,19 +181,18 @@ http_body = http_response.split("\r\n\r\n", 1)[1]  # Split headers and body
 # Pass the response body to BeautifulSoup for scraping
 soup = BeautifulSoup(http_body, 'html.parser')
 
-products = soup.find_all('figure', class_='card card-product border-0')
+products = soup.find_all('div', class_='product-card bg-color-1c br-20 position-relative overflow-hidden h-100')
 
 print("\nPrinting all products found on the page:\n")
 product_list = []
 for product in products[:3]:
-        name = product.find('a', class_='d-block mb-2 ga-item').text  
+        name = product.find('div', class_='title-product fs-16 lh-19 mb-sm-2').text  
         name = name.strip()  # Validation: strip whitespace
-        price_container = product.find('span', class_='price-new')
-        price_text = price_container.find('b').text if price_container else "Price not found" 
+        price_text = product.find('div', class_='price-new fw-600 fs-16 lh-19 align-self-end').text
         print(f"Product Name: {name}")
         # Validation: Ensure the price is an integer and remove non-numeric characters
         try:
-            price_mdl = int(price_text.replace(',', '').replace(' ', '').replace('MDL', ''))
+            price_mdl = int(price_text.replace(',', '').replace(' ', '').replace('lei', ''))
             print(f"Product Price (MDL): {price_mdl}")
         except ValueError:
             print(f"Invalid price format: {price_text}")
@@ -170,7 +204,7 @@ for product in products[:3]:
         })
 
         # Task 3 (Extract product link and something from product page)
-        product_link_tag = product.find('a', class_='d-block mb-2 ga-item') 
+        product_link_tag = product.find('a', class_='d-block stretched-link text-white text-decoration-none') 
         product_link = product_link_tag['href'] if product_link_tag else "Link not found"
         print(f"Product Link: {product_link}")
 
@@ -178,11 +212,17 @@ for product in products[:3]:
         product_body = product_response.split("\r\n\r\n", 1)[1]
         product_soup = BeautifulSoup(product_body, 'html.parser')
 
-        specs_list_tag = product_soup.find('ul', class_='features')
-        specs_list = specs_list_tag.find_all('li', class_='char_all') if specs_list_tag else []
-        specs = [spec.text.strip() for spec in specs_list]  # Validation: strip any extra whitespaces from specs
+        specs_container = product_soup.find('div', class_='p-sm-4 p-3 h-100 bg-color-1c br-20')
+        specs_table = product_soup.find('tbody')
+        specs_rows = specs_table.find_all('tr')
+        specs_list = []
+        for row in specs_rows:
+            spec_name = row.find('td', class_='pt-2 pe-4 w-100 mw-300').text.strip()
+            spec = row.find('td', class_="pt-2 pe-4 w-100").text.strip()
+            specs_list.append(f"{spec_name} : {spec}")
+
         print("Device specs:")
-        for spec in specs:
+        for spec in specs_list:
             print(spec)
 
         print("-------")

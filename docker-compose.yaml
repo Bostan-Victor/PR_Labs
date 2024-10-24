@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   lab1-http-server:  
-    image: vain12/server-pr-lab1:latest 
+    image: nicug/server-pr-lab1:latest 
     ports:
       - "8000:8000" 
     environment:
