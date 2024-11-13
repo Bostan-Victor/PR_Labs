@@ -15,7 +15,7 @@ def process_products(products):
     mapped_products = map(lambda p: {**p, 'price_eur': mdl_to_eur(p['price_mdl'])}, products)
     
     # Filter: Products within a certain price range in EUR
-    filtered_products = list(filter(lambda p: 100 <= p['price_eur'] <= 500, mapped_products))
+    filtered_products = list(filter(lambda p: 100 <= p['price_eur'] <= 700, mapped_products))
     
     # Reduce: Sum up the EUR prices of the filtered products
     total_price_eur = reduce(lambda acc, p: acc + p['price_eur'], filtered_products, 0)
@@ -212,18 +212,18 @@ for product in products[:3]:
         product_body = product_response.split("\r\n\r\n", 1)[1]
         product_soup = BeautifulSoup(product_body, 'html.parser')
 
-        specs_container = product_soup.find('div', class_='p-sm-4 p-3 h-100 bg-color-1c br-20')
-        specs_table = product_soup.find('tbody')
-        specs_rows = specs_table.find_all('tr')
-        specs_list = []
-        for row in specs_rows:
-            spec_name = row.find('td', class_='pt-2 pe-4 w-100 mw-300').text.strip()
-            spec = row.find('td', class_="pt-2 pe-4 w-100").text.strip()
-            specs_list.append(f"{spec_name} : {spec}")
+        # specs_container = product_soup.find('div', class_='p-sm-4 p-3 h-100 bg-color-1c br-20')
+        # specs_table = product_soup.find('tbody')
+        # specs_rows = specs_table.find_all('tr')
+        # specs_list = []
+        # for row in specs_rows:
+        #     spec_name = row.find('td', class_='pt-2 pe-4 w-100 mw-300').text.strip()
+        #     spec = row.find('td', class_="pt-2 pe-4 w-100").text.strip()
+        #     specs_list.append(f"{spec_name} : {spec}")
 
-        print("Device specs:")
-        for spec in specs_list:
-            print(spec)
+        # print("Device specs:")
+        # for spec in specs_list:
+        #     print(spec)
 
         print("-------")
 

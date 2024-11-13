@@ -1,5 +1,9 @@
 from flask import Flask, request, jsonify
 from models import db, Product
+import threading
+import asyncio
+import websockets
+import json
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///products.db'
@@ -90,6 +94,62 @@ def upload_file():
         print(file_contents)
 
         return jsonify({'message': 'File content received', 'contents': file_contents}), 200
+    
+# In-memory structure for the chat rooms
+chat_rooms = {"general": set()}  # Default chat room
+
+async def chat_handler(websocket, path):
+    current_room = None
+    try:
+        async for message in websocket:
+            data = json.loads(message)
+            command = data.get("command")
+            username = data.get("username")
+
+            # User joins a room
+            if command == "join_room":
+                room = data.get("room", "general")
+                current_room = room
+                if room not in chat_rooms:
+                    chat_rooms[room] = set()
+                chat_rooms[room].add(websocket)
+                join_msg = f"{username} joined {room}"
+                await broadcast(room, json.dumps({"message": join_msg}))
+
+            # User sends a message
+            elif command == "send_msg" and current_room:
+                msg = data.get("message")
+                if msg:
+                    broadcast_message = json.dumps({"username": username, "message": msg})
+                    await broadcast(current_room, broadcast_message)
+
+            # User leaves the room
+            elif command == "leave_room" and current_room:
+                chat_rooms[current_room].discard(websocket)
+                leave_msg = f"{username} left {current_room}"
+                await broadcast(current_room, json.dumps({"message": leave_msg}))
+                current_room = None
+
+    except websockets.ConnectionClosed:
+        # Handle disconnection
+        if current_room:
+            chat_rooms[current_room].discard(websocket)
+
+async def broadcast(room, message):
+    # Send the message to all clients in the room
+    clients = chat_rooms.get(room, set())
+    for ws in clients:
+        if ws.open:  # Only to active connections
+            await ws.send(message)
+
+async def start_websocket_server():
+    async with websockets.serve(chat_handler, "localhost", 6790):
+        await asyncio.Future()  # Run forever
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Start WebSocket server in a new thread
+    websocket_thread = threading.Thread(target=lambda: asyncio.run(start_websocket_server()))
+    websocket_thread.start()
+
+    # Start Flask HTTP server
+    app.run(port=5000)
