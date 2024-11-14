@@ -11,12 +11,12 @@ COPY . /app
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-# Expose the port your app will run on
+# Expose both the Flask and WebSocket ports
 EXPOSE 5000
+EXPOSE 6790
 
-# Define environment variable for production
-ENV FLASK_APP=app.py
-ENV FLASK_RUN_HOST=0.0.0.0
+# Make the start script executable
+RUN chmod +x start.sh
 
-# Run the app when the container launches
-CMD ["flask", "run"]
+# Run the start script
+CMD ["./start.sh"]
