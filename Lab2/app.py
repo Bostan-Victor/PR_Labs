@@ -101,35 +101,47 @@ chat_rooms = {"general": set()}  # Default chat room
 
 async def chat_handler(websocket, path):
     current_room = None
+    username = None  
+
     try:
         async for message in websocket:
             data = json.loads(message)
             command = data.get("command")
-            username = data.get("username")
+            provided_username = data.get("username")
 
-            # User joins a room
-            if command == "join_room":
+            # Set username on first join command and validate for every action
+            if command == "join_room" and username is None:
+                username = provided_username
                 room = data.get("room", "general")
                 current_room = room
+
+                # Add the user to the room
                 if room not in chat_rooms:
                     chat_rooms[room] = set()
                 chat_rooms[room].add(websocket)
+
+                # Notify others in the room
                 join_msg = f"{username} joined {room}"
                 await broadcast(room, json.dumps({"message": join_msg}))
 
-            # User sends a message
-            elif command == "send_msg" and current_room:
-                msg = data.get("message")
-                if msg:
-                    broadcast_message = json.dumps({"username": username, "message": msg})
-                    await broadcast(current_room, broadcast_message)
+            # Only allow actions if the username matches the connection's assigned username
+            elif command == "send_msg" and username == provided_username:
+                if current_room:
+                    msg = data.get("message")
+                    if msg:
+                        broadcast_message = json.dumps({"username": username, "message": msg})
+                        await broadcast(current_room, broadcast_message)
 
-            # User leaves the room
-            elif command == "leave_room" and current_room:
-                chat_rooms[current_room].discard(websocket)
-                leave_msg = f"{username} left {current_room}"
-                await broadcast(current_room, json.dumps({"message": leave_msg}))
-                current_room = None
+            elif command == "leave_room" and username == provided_username:
+                # Remove the user from the current room
+                if current_room:
+                    chat_rooms[current_room].discard(websocket)
+                    leave_msg = f"{username} left {current_room}"
+                    await broadcast(current_room, json.dumps({"message": leave_msg}))
+                    current_room = None
+
+            else:
+                await websocket.send(json.dumps({"error": "Unauthorized action or invalid command"}))
 
     except websockets.ConnectionClosed:
         # Handle disconnection
