@@ -102,9 +102,7 @@ def upload_file():
 
     if file:
         file_contents = file.read().decode('utf-8')
-
-        print(file_contents)
-
+        print(f"Received file content: {file_contents}")
         return jsonify({'message': 'File content received', 'contents': file_contents}), 200
 
 if __name__ == '__main__':

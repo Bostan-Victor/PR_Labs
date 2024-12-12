@@ -5,9 +5,16 @@ from functools import reduce
 from datetime import datetime, timezone
 import pika
 import json
+import ftplib
 
 MDL_TO_EUR_RATE = 19.5  
-EUR_TO_MDL_RATE = 1 / MDL_TO_EUR_RATE  
+EUR_TO_MDL_RATE = 1 / MDL_TO_EUR_RATE 
+
+FTP_HOST = 'localhost'
+FTP_PORT = 21
+FTP_USER = 'testuser'
+FTP_PASS = 'testpass'
+FTP_FILE = 'processed_data.json'
 
 def mdl_to_eur(price_mdl):
     return price_mdl / MDL_TO_EUR_RATE
@@ -217,7 +224,7 @@ for product in products[:3]:
 processed_result = process_products(product_list)
 print(processed_result)
 
-# RabbitMQ section 
+# Lab 7
 
 def publish_to_rabbitmq(queue, message):
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
@@ -230,4 +237,25 @@ def publish_to_rabbitmq(queue, message):
     print(f"Published message to RabbitMQ: {message}")
     connection.close()
 
-publish_to_rabbitmq('product_queue', processed_result)
+def save_to_ftp(file_content, file_name):
+    try:
+        with ftplib.FTP() as ftp:
+            ftp.connect(FTP_HOST, FTP_PORT)
+            ftp.login(FTP_USER, FTP_PASS)
+            
+            # Upload the file
+            with open(file_name, 'wb') as f:
+                f.write(file_content)
+            
+            with open(file_name, 'rb') as f:
+                ftp.storbinary(f"STOR {file_name}", f)
+
+        print(f"File {file_name} uploaded to FTP server successfully.")
+    except Exception as e:
+        print(f"Error uploading file to FTP: {e}")
+
+file_content = json.dumps(processed_result).encode('utf-8')
+file_name = 'processed_data.json'
+
+# publish_to_rabbitmq('product_queue', processed_result)
+save_to_ftp(file_content, file_name)

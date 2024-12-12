@@ -6,3 +6,16 @@ services:
     ports:
       - 5672:5672
       - 15672:15672
+
+  ftp_server:
+    image: stilliard/pure-ftpd:hardened
+    container_name: ftp_server
+    ports:
+      - "21:21"
+      - "30000-30009:30000-30009"
+    environment:
+      FTP_USER_NAME: testuser
+      FTP_USER_PASS: testpass
+      FTP_USER_HOME: /home/testuser
+    volumes:
+      - ./ftp_data:/home/testuser

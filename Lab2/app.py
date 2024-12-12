@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from models import db, Product
+from Lab3.models import db, Product
 import threading
 import asyncio
 import websockets
